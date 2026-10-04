@@ -1,0 +1,52 @@
+name: Live Gateway E2E
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live:
+    name: Live Gateway E2E
+    runs-on: ubuntu-latest
+
+    environment:
+      staging
+
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+          cache: "pip"
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run smoke tests
+        env:
+          LITELLM_BASE_URL: ${{ secrets.STAGING_LITELLM_BASE_URL }}
+          LITELLM_MASTER_KEY: ${{ secrets.STAGING_LITELLM_MASTER_KEY }}
+        run: |
+          python -m pytest \
+            -v \
+            -m "not live"
+
+      - name: Run live tests
+        env:
+          LITELLM_BASE_URL: ${{ secrets.STAGING_LITELLM_BASE_URL }}
+          LITELLM_MASTER_KEY: ${{ secrets.STAGING_LITELLM_MASTER_KEY }}
+        run: |
+          python -m pytest \
+            -v \
+            -m "live"
