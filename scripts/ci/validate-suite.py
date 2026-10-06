@@ -19,6 +19,9 @@ REQUIRED_TESTS = {
     "test_streaming",
     "test_team_policy_changes_without_key_rotation",
     "test_spend_is_attributed_to_user",
+    "test_blocked_key_is_rejected",
+    "test_team_rpm_limit_is_enforced",
+    "test_key_budget_is_enforced",
 }
 
 

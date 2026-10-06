@@ -64,3 +64,71 @@ class LiteLLMClient:
             )
 
         return response.json()
+
+    def create_team(
+        self,
+        *,
+        team_alias: str,
+        models: list[str],
+        rpm_limit: int | None = None,
+        tpm_limit: int | None = None,
+        max_budget: float | None = None,
+        budget_duration: str | None = None,
+    ) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "team_alias": team_alias,
+            "models": models,
+        }
+
+        if rpm_limit is not None:
+            payload["rpm_limit"] = rpm_limit
+
+        if tpm_limit is not None:
+            payload["tpm_limit"] = tpm_limit
+
+        if max_budget is not None:
+            payload["max_budget"] = max_budget
+
+        if budget_duration is not None:
+            payload["budget_duration"] = budget_duration
+
+        response = self.post(
+            "/team/new",
+            json=payload,
+        )
+
+        data = self.expect_json(
+            response,
+            expected_status=200,
+        )
+
+        team_id = data.get("team_id")
+
+        if not team_id:
+            raise AssertionError(
+                "LiteLLM /team/new response "
+                "does not contain team_id.\n"
+                f"Response: {data}"
+            )
+
+        if rpm_limit is not None:
+            actual_rpm = data.get("rpm_limit")
+
+            if actual_rpm != rpm_limit:
+                raise AssertionError(
+                    "Team rpm_limit was not persisted. "
+                    f"requested={rpm_limit}, "
+                    f"actual={actual_rpm}"
+                )
+
+        if tpm_limit is not None:
+            actual_tpm = data.get("tpm_limit")
+
+            if actual_tpm != tpm_limit:
+                raise AssertionError(
+                    "Team tpm_limit was not persisted. "
+                    f"requested={tpm_limit}, "
+                    f"actual={actual_tpm}"
+                )
+
+        return data

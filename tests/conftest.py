@@ -197,3 +197,275 @@ def user_client(
         base_url=base_url,
         api_key=e2e_identity["virtual_key"],
     )
+
+
+@pytest.fixture()
+def rpm_limited_identity(
+    admin_client: LiteLLMClient,
+    fast_model: str,
+):
+    suffix = uuid.uuid4().hex[:8]
+
+    user_id = f"e2e-rpm-user-{suffix}"
+    team_alias = f"e2e-rpm-team-{suffix}"
+    key_alias = f"e2e-rpm-key-{suffix}"
+
+    #
+    # 1. User
+    #
+
+    response = admin_client.post(
+        "/user/new",
+        json={
+            "user_id": user_id,
+            "user_role": "internal_user",
+            "auto_create_key": False,
+        },
+    )
+
+    admin_client.expect_json(response)
+
+    #
+    # 2. RPM-limited Team
+    #
+
+    team_data = admin_client.create_team(
+        team_alias=team_alias,
+        models=[
+            fast_model,
+        ],
+        rpm_limit=2,
+        tpm_limit=50000,
+    )
+
+    team_id = team_data["team_id"]
+
+    #
+    # 3. Membership
+    #
+
+    response = admin_client.post(
+        "/team/member_add",
+        json={
+            "team_id": team_id,
+            "max_budget_in_team": 0.50,
+            "member": {
+                "role": "user",
+                "user_id": user_id,
+            },
+        },
+    )
+
+    admin_client.expect_json(response)
+
+    #
+    # 4. Virtual Key
+    #
+    # Penting:
+    # jangan set rpm_limit/tpm_limit pada key.
+    # Kita ingin membuktikan TEAM limit yang bekerja.
+    #
+
+    response = admin_client.post(
+        "/key/generate",
+        json={
+            "user_id": user_id,
+            "team_id": team_id,
+            "key_alias": key_alias,
+            "models": [
+                "all-team-models",
+            ],
+            "metadata": {
+                "environment": "e2e",
+                "purpose": "rpm-enforcement-test",
+            },
+        },
+    )
+
+    key_data = admin_client.expect_json(response)
+
+    virtual_key = key_data["key"]
+
+    context = {
+        "user_id": user_id,
+        "team_id": team_id,
+        "team_alias": team_alias,
+        "key_alias": key_alias,
+        "virtual_key": virtual_key,
+        "rpm_limit": 2,
+        "tpm_limit": 50000,
+    }
+
+    #
+    # Test berjalan di sini.
+    #
+
+    yield context
+
+    #
+    # Cleanup
+    #
+    # Jangan print virtual key.
+    #
+
+    try:
+        admin_client.post(
+            "/key/block",
+            json={
+                "key": virtual_key,
+            },
+        )
+    finally:
+        admin_client.post(
+            "/team/update",
+            json={
+                "team_id": team_id,
+                "blocked": True,
+            },
+        )
+
+
+@pytest.fixture()
+def rpm_user_client(
+    base_url: str,
+    rpm_limited_identity: dict,
+) -> LiteLLMClient:
+    return LiteLLMClient(
+        base_url=base_url,
+        api_key=rpm_limited_identity["virtual_key"],
+    )
+
+
+@pytest.fixture()
+def budget_limited_identity(
+    admin_client: LiteLLMClient,
+    fast_model: str,
+):
+    suffix = uuid.uuid4().hex[:8]
+
+    user_id = f"e2e-budget-user-{suffix}"
+    team_alias = f"e2e-budget-team-{suffix}"
+    key_alias = f"e2e-budget-key-{suffix}"
+
+    key_max_budget = 0.000001
+
+    #
+    # 1. User
+    #
+
+    response = admin_client.post(
+        "/user/new",
+        json={
+            "user_id": user_id,
+            "user_role": "internal_user",
+            "auto_create_key": False,
+        },
+    )
+
+    admin_client.expect_json(response)
+
+    #
+    # 2. Team
+    #
+    # Team budget intentionally much larger
+    # than the key budget.
+    #
+
+    team_data = admin_client.create_team(
+        team_alias=team_alias,
+        models=[
+            fast_model,
+        ],
+        max_budget=1,
+        budget_duration="30d",
+    )
+
+    team_id = team_data["team_id"]
+
+    #
+    # 3. Membership
+    #
+
+    response = admin_client.post(
+        "/team/member_add",
+        json={
+            "team_id": team_id,
+            "max_budget_in_team": 0.50,
+            "member": {
+                "role": "user",
+                "user_id": user_id,
+            },
+        },
+    )
+
+    admin_client.expect_json(response)
+
+    #
+    # 4. Virtual Key
+    #
+    # Only this key has the tiny budget.
+    #
+
+    response = admin_client.post(
+        "/key/generate",
+        json={
+            "user_id": user_id,
+            "team_id": team_id,
+            "key_alias": key_alias,
+            "models": [
+                "all-team-models",
+            ],
+            "max_budget": key_max_budget,
+            "budget_duration": "1h",
+            "metadata": {
+                "environment": "e2e",
+                "purpose": "budget-enforcement-test",
+            },
+        },
+    )
+
+    key_data = admin_client.expect_json(response)
+
+    virtual_key = key_data["key"]
+
+    context = {
+        "user_id": user_id,
+        "team_id": team_id,
+        "team_alias": team_alias,
+        "key_alias": key_alias,
+        "virtual_key": virtual_key,
+        "max_budget": key_max_budget,
+    }
+
+    yield context
+
+    #
+    # Cleanup
+    #
+
+    try:
+        admin_client.post(
+            "/key/block",
+            json={
+                "key": virtual_key,
+            },
+        )
+    finally:
+        admin_client.post(
+            "/team/update",
+            json={
+                "team_id": team_id,
+                "blocked": True,
+            },
+        )
+
+
+@pytest.fixture()
+def budget_user_client(
+    base_url: str,
+    budget_limited_identity: dict,
+) -> LiteLLMClient:
+    return LiteLLMClient(
+        base_url=base_url,
+        api_key=budget_limited_identity["virtual_key"],
+    )
