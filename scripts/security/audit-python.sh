@@ -28,6 +28,12 @@ if [ ! -f "$REQUIREMENTS_FILE" ]; then
   exit 1
 fi
 
+# Reuse an installed auditor when available; CI retains isolated-tool fallback.
+if [ -n "${PIP_AUDIT_BIN:-}" ]; then
+  "$PIP_AUDIT_BIN" -r "$REQUIREMENTS_FILE"
+  exit 0
+fi
+
 PIP_AUDIT_VERSION="${PIP_AUDIT_VERSION:-2.10.1}"
 
 TEMP_DIR="$(mktemp -d)"

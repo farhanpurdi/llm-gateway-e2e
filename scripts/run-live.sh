@@ -35,4 +35,5 @@ echo
 
 python3 -m pytest \
     -v \
-    -m "live"
+    -m "${E2E_LIVE_MARKERS:-live and not outage}" \
+    "$@"
