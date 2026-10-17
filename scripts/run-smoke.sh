@@ -31,4 +31,4 @@ cd "$ROOT_DIR"
 
 python3 -m pytest \
     -v \
-    -m "not live"
+    -m "not live and not unit"

@@ -16,5 +16,5 @@ def test_user_can_see_expected_models(
         for model in data["data"]
     }
 
-    assert fast_model in model_ids
-    assert coding_model in model_ids
+    assert model_ids == {fast_model, coding_model}
+    assert len(data["data"]) == len(model_ids), "Duplicate logical models exposed"

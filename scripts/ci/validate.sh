@@ -20,7 +20,7 @@ echo "LLM Gateway E2E Validation"
 echo "======================================"
 
 echo
-echo "[1/7] Bash syntax"
+echo "[1/8] Bash syntax"
 
 while IFS= read -r -d '' file; do
   echo "Checking: $file"
@@ -36,7 +36,7 @@ echo "Bash syntax: PASS"
 
 
 echo
-echo "[2/7] ShellCheck"
+echo "[2/8] ShellCheck"
 
 if ! command -v shellcheck >/dev/null; then
   echo "ERROR: shellcheck is not installed."
@@ -54,7 +54,7 @@ echo "ShellCheck: PASS"
 
 
 echo
-echo "[3/7] Python syntax"
+echo "[3/8] Python syntax"
 
 python3 \
   -m compileall \
@@ -66,7 +66,7 @@ echo "Python syntax: PASS"
 
 
 echo
-echo "[4/7] Python dependency health"
+echo "[4/8] Python dependency health"
 
 python3 -m pip check
 
@@ -74,14 +74,14 @@ echo "Python dependencies: PASS"
 
 
 echo
-echo "[5/7] Regression suite structure"
+echo "[5/8] Regression suite structure"
 
 python3 \
   scripts/ci/validate-suite.py
 
 
 echo
-echo "[6/7] Pytest collection"
+echo "[6/8] Pytest collection"
 
 python3 \
   -m pytest \
@@ -92,7 +92,14 @@ echo "Pytest collection: PASS"
 
 
 echo
-echo "[7/7] Git safety"
+echo "[7/8] Offline regression tests"
+
+"$REPO_ROOT/scripts/run-unit.sh"
+
+echo "Offline regression tests: PASS"
+
+echo
+echo "[8/8] Git safety"
 
 if git ls-files \
     | grep -qE '(^|/)\.env$'; then

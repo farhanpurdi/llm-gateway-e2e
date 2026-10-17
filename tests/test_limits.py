@@ -57,7 +57,7 @@ def test_team_rpm_limit_is_enforced(
     assert statuses[2] == 429, (
         "Third request should be rate limited. "
         f"statuses={statuses}. "
-        f"response={responses[2].text}"
+        "response body suppressed"
     )
 
 
@@ -96,7 +96,7 @@ def test_key_budget_is_enforced(
     assert first.status_code == 200, (
         "First request should be allowed. "
         f"status={first.status_code}, "
-        f"response={first.text}"
+        "response body suppressed"
     )
 
     #
@@ -153,7 +153,7 @@ def test_key_budget_is_enforced(
         "Expected exhausted key budget to be rejected "
         "with HTTP 422. "
         f"status={second.status_code}, "
-        f"response={second.text}"
+        "response body suppressed"
     )
 
 
@@ -188,7 +188,7 @@ def test_blocked_key_is_rejected(
     assert before.status_code == 200, (
         "Virtual key should work before blocking. "
         f"status={before.status_code}, "
-        f"response={before.text}"
+        "response body suppressed"
     )
 
     #
@@ -219,5 +219,5 @@ def test_blocked_key_is_rejected(
     }, (
         "Blocked virtual key was still accepted. "
         f"status={after.status_code}, "
-        f"response={after.text}"
+        "response body suppressed"
     )
